@@ -2,6 +2,10 @@ package cli
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -27,7 +31,7 @@ func TestRunPrintsVersion(t *testing.T) {
 		t.Fatalf("Run returned error: %v", err)
 	}
 
-	if got, want := out.String(), "note-cli test\n"; got != want {
+	if got, want := out.String(), "note test\n"; got != want {
 		t.Fatalf("got %q, want %q", got, want)
 	}
 }
@@ -38,4 +42,42 @@ func TestRunRejectsUnknownCommand(t *testing.T) {
 	if err := app.Run([]string{"missing"}); err == nil {
 		t.Fatal("expected error")
 	}
+}
+
+func TestRunAddsNote(t *testing.T) {
+	var out bytes.Buffer
+	notesDir := t.TempDir()
+	app := New(Config{Out: &out, NotesDir: notesDir})
+
+	if err := app.Run([]string{"add", "hello", "world"}); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	hash := noteHash("hello world")
+	path := filepath.Join(notesDir, hash)
+	contents, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("expected note file: %v", err)
+	}
+
+	if got, want := string(contents), "hello world\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+
+	if got, want := out.String(), "added note "+hash+"\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestRunRejectsEmptyNote(t *testing.T) {
+	app := New(Config{NotesDir: t.TempDir()})
+
+	if err := app.Run([]string{"add"}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func noteHash(note string) string {
+	sum := sha256.Sum256([]byte(note))
+	return hex.EncodeToString(sum[:])
 }

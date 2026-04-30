@@ -1,5 +1,6 @@
-APP := note-cli
+APP := note
 BIN_DIR := bin
+RUN_ARGS := $(filter-out run,$(MAKECMDGOALS))
 
 .PHONY: build
 build:
@@ -11,8 +12,11 @@ test:
 
 .PHONY: run
 run:
-	go run ./cmd/$(APP)
+	go run ./cmd/$(APP) $(RUN_ARGS)
 
 .PHONY: clean
 clean:
 	rm -rf $(BIN_DIR)
+
+%:
+	@:

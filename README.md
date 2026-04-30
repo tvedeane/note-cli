@@ -2,16 +2,21 @@
 
 A small command-line tool that can be used to save, list, and delete notes
 
+## Status
+
+This repository currently contains the Go CLI project structure and the `add`
+command. List and delete commands are not implemented yet.
+
 ## Requirements
 
 - Go 1.22 or newer
 
 ## Project Structure
 
-- `cmd/note-cli`: application entry point
+- `cmd/note`: application entry point
 - `internal/cli`: CLI application wiring
 
-`cmd/` contains executable entry points. The `cmd/note-cli` package is the
+`cmd/` contains executable entry points. The `cmd/note` package is the
 small `main` package that reads process inputs, wires stdout/stderr, runs the
 CLI app, and exits with the right status code.
 
@@ -26,6 +31,16 @@ it as a public library API.
 make test
 make build
 make run
+make run add "remember to write tests"
 ```
 
-The build output is written to `bin/note-cli`.
+The build output is written to `bin/note`.
+
+## Usage
+
+```sh
+note add "remember to write tests"
+```
+
+Added notes are stored under `.notes/db`. Each note filename is the SHA-256 hash
+of the note text.

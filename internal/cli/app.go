@@ -1,22 +1,30 @@
 package cli
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"io"
+	"os"
+	"path/filepath"
+	"strings"
 )
 
-const appName = "note-cli"
+const appName = "note"
+const defaultNotesDir = ".notes/db"
 
 type Config struct {
-	Out     io.Writer
-	Err     io.Writer
-	Version string
+	Out      io.Writer
+	Err      io.Writer
+	NotesDir string
+	Version  string
 }
 
 type App struct {
-	out     io.Writer
-	err     io.Writer
-	version string
+	out      io.Writer
+	err      io.Writer
+	notesDir string
+	version  string
 }
 
 func New(config Config) *App {
@@ -26,14 +34,18 @@ func New(config Config) *App {
 	if config.Err == nil {
 		config.Err = io.Discard
 	}
+	if config.NotesDir == "" {
+		config.NotesDir = defaultNotesDir
+	}
 	if config.Version == "" {
 		config.Version = "dev"
 	}
 
 	return &App{
-		out:     config.Out,
-		err:     config.Err,
-		version: config.Version,
+		out:      config.Out,
+		err:      config.Err,
+		notesDir: config.NotesDir,
+		version:  config.Version,
 	}
 }
 
@@ -50,9 +62,36 @@ func (app *App) Run(args []string) error {
 	case "-v", "--version", "version":
 		fmt.Fprintf(app.out, "%s %s\n", appName, app.version)
 		return nil
+	case "add":
+		return app.addNote(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
+}
+
+func (app *App) addNote(args []string) error {
+	note := strings.TrimSpace(strings.Join(args, " "))
+	if note == "" {
+		return fmt.Errorf("usage: %s add <note>", appName)
+	}
+
+	hash := hashNote(note)
+	if err := os.MkdirAll(app.notesDir, 0o755); err != nil {
+		return fmt.Errorf("create notes directory: %w", err)
+	}
+
+	path := filepath.Join(app.notesDir, hash)
+	if err := os.WriteFile(path, []byte(note+"\n"), 0o644); err != nil {
+		return fmt.Errorf("write note: %w", err)
+	}
+
+	fmt.Fprintf(app.out, "added note %s\n", hash)
+	return nil
+}
+
+func hashNote(note string) string {
+	sum := sha256.Sum256([]byte(note))
+	return hex.EncodeToString(sum[:])
 }
 
 func (app *App) printHelp() {
@@ -62,9 +101,10 @@ Usage:
   %s <command> [arguments]
 
 Commands:
+  add <note>  Add a note
   help       Show this help text
   version    Show the application version
 
-Note commands will be added later.
+Notes are stored in .notes/db with the note hash as the filename.
 `, appName, appName)
 }
