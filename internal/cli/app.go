@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 )
 
@@ -64,6 +65,8 @@ func (app *App) Run(args []string) error {
 		return nil
 	case "add":
 		return app.addNote(args[1:])
+	case "list":
+		return app.listNotes()
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
@@ -89,6 +92,41 @@ func (app *App) addNote(args []string) error {
 	return nil
 }
 
+func (app *App) listNotes() error {
+	entries, err := os.ReadDir(app.notesDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("read notes directory: %w", err)
+	}
+
+	sort.Slice(entries, func(i, j int) bool {
+		return entries[i].Name() < entries[j].Name()
+	})
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+
+		path := filepath.Join(app.notesDir, entry.Name())
+		contents, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("read note %q: %w", entry.Name(), err)
+		}
+
+		note := strings.TrimRight(string(contents), "\r\n")
+		if note == "" {
+			continue
+		}
+
+		fmt.Fprintln(app.out, note)
+	}
+
+	return nil
+}
+
 func hashNote(note string) string {
 	sum := sha256.Sum256([]byte(note))
 	return hex.EncodeToString(sum[:])
@@ -102,6 +140,7 @@ Usage:
 
 Commands:
   add <note>  Add a note
+  list        List all notes
   help       Show this help text
   version    Show the application version
 

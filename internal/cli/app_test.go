@@ -77,6 +77,48 @@ func TestRunRejectsEmptyNote(t *testing.T) {
 	}
 }
 
+func TestRunListsNotes(t *testing.T) {
+	var out bytes.Buffer
+	notesDir := t.TempDir()
+	app := New(Config{Out: &out, NotesDir: notesDir})
+
+	for _, note := range []string{"second note", "first note"} {
+		if err := writeTestNote(notesDir, note); err != nil {
+			t.Fatalf("write test note: %v", err)
+		}
+	}
+
+	if err := app.Run([]string{"list"}); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if got, want := out.String(), "first note\nsecond note\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestRunListsNothingWhenNotesDirDoesNotExist(t *testing.T) {
+	var out bytes.Buffer
+	notesDir := filepath.Join(t.TempDir(), "missing", "db")
+	app := New(Config{Out: &out, NotesDir: notesDir})
+
+	if err := app.Run([]string{"list"}); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if got := out.String(); got != "" {
+		t.Fatalf("got %q, want empty output", got)
+	}
+}
+
+func writeTestNote(notesDir string, note string) error {
+	if err := os.MkdirAll(notesDir, 0o755); err != nil {
+		return err
+	}
+
+	return os.WriteFile(filepath.Join(notesDir, noteHash(note)), []byte(note+"\n"), 0o644)
+}
+
 func noteHash(note string) string {
 	sum := sha256.Sum256([]byte(note))
 	return hex.EncodeToString(sum[:])
