@@ -64,6 +64,8 @@ func (app *App) Run(args []string) error {
 		return nil
 	case "add":
 		return app.addNote(args[1:])
+	case "delete":
+		return app.deleteNote(args[1:])
 	default:
 		return fmt.Errorf("unknown command %q", args[0])
 	}
@@ -89,6 +91,24 @@ func (app *App) addNote(args []string) error {
 	return nil
 }
 
+func (app *App) deleteNote(args []string) error {
+	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+		return fmt.Errorf("usage: %s delete <hash>", appName)
+	}
+
+	hash := strings.TrimSpace(args[0])
+	path := filepath.Join(app.notesDir, hash)
+	if err := os.Remove(path); err != nil {
+		if os.IsNotExist(err) {
+			return fmt.Errorf("note %s not found", hash)
+		}
+		return fmt.Errorf("delete note: %w", err)
+	}
+
+	fmt.Fprintf(app.out, "deleted note %s\n", hash)
+	return nil
+}
+
 func hashNote(note string) string {
 	sum := sha256.Sum256([]byte(note))
 	return hex.EncodeToString(sum[:])
@@ -101,9 +121,10 @@ Usage:
   %s <command> [arguments]
 
 Commands:
-  add <note>  Add a note
-  help       Show this help text
-  version    Show the application version
+  add <note>      Add a note
+  delete <hash>   Delete a note
+  help            Show this help text
+  version         Show the application version
 
 Notes are stored in .notes/db with the note hash as the filename.
 `, appName, appName)

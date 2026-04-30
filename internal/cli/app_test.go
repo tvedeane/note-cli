@@ -77,6 +77,45 @@ func TestRunRejectsEmptyNote(t *testing.T) {
 	}
 }
 
+func TestRunDeletesNote(t *testing.T) {
+	var out bytes.Buffer
+	notesDir := t.TempDir()
+	hash := noteHash("hello world")
+	path := filepath.Join(notesDir, hash)
+	if err := os.WriteFile(path, []byte("hello world\n"), 0o644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	app := New(Config{Out: &out, NotesDir: notesDir})
+	if err := app.Run([]string{"delete", hash}); err != nil {
+		t.Fatalf("Run returned error: %v", err)
+	}
+
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Fatalf("expected note to be deleted, got err %v", err)
+	}
+
+	if got, want := out.String(), "deleted note "+hash+"\n"; got != want {
+		t.Fatalf("got %q, want %q", got, want)
+	}
+}
+
+func TestRunRejectsDeleteWithoutHash(t *testing.T) {
+	app := New(Config{NotesDir: t.TempDir()})
+
+	if err := app.Run([]string{"delete"}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
+func TestRunRejectsDeleteForMissingNote(t *testing.T) {
+	app := New(Config{NotesDir: t.TempDir()})
+
+	if err := app.Run([]string{"delete", noteHash("missing")}); err == nil {
+		t.Fatal("expected error")
+	}
+}
+
 func noteHash(note string) string {
 	sum := sha256.Sum256([]byte(note))
 	return hex.EncodeToString(sum[:])
