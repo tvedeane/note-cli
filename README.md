@@ -4,8 +4,8 @@ A small command-line tool that can be used to save, list, and delete notes
 
 ## Status
 
-This repository currently contains the Go CLI project structure and the `add`
-and `list` commands. Delete is not implemented yet.
+This repository currently contains the Go CLI project structure and the `add`,
+`list` and `delete` commands.
 
 ## Requirements
 
@@ -32,6 +32,7 @@ make test
 make build
 make run
 make run add "remember to write tests"
+make run delete <hash>
 make run list
 ```
 
@@ -41,8 +42,9 @@ The build output is written to `bin/note`.
 
 ```sh
 note add "remember to write tests"
+note delete <hash>
 note list
 ```
 
 Added notes are stored under `.notes/db`. Each note filename is the SHA-256 hash
-of the note text.
+of the note text. Use the hash printed by `note add` to delete a note.
